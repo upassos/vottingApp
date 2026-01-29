@@ -2,8 +2,12 @@ package com.ubione.voting.domain.service;
 
 import com.ubione.voting.api.response.ResultResponse;
 import com.ubione.voting.domain.entity.SessionStatus;
+import com.ubione.voting.domain.entity.VoteChoice;
 import com.ubione.voting.infra.repository.VoteRepository;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ResultService {
@@ -21,13 +25,14 @@ public class ResultService {
     public ResultResponse getResult(Long agendaId) {
         agendaService.getOrThrow(agendaId);
 
-        long yes = 0, no = 0;
-        for (Object[] row : voteRepository.countByChoice(agendaId)) {
-            String choice = String.valueOf(row[0]);
-            long total = ((Number) row[1]).longValue();
-            if ("YES".equalsIgnoreCase(choice)) yes = total;
-            if ("NO".equalsIgnoreCase(choice)) no = total;
-        }
+        Map<VoteChoice, Long> counts = voteRepository.countByChoice(agendaId).stream()
+                .collect(Collectors.toMap(
+                        row -> VoteChoice.valueOf(String.valueOf(row[0]).toUpperCase()),
+                        row -> ((Number) row[1]).longValue()
+                ));
+
+        long yes = counts.getOrDefault(VoteChoice.YES, 0L);
+        long no = counts.getOrDefault(VoteChoice.NO, 0L);
 
         String status = sessionService.getCurrentOpenSession(agendaId)
                 .map(s -> s.getStatus().name())

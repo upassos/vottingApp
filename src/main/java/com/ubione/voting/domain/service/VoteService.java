@@ -2,12 +2,13 @@ package com.ubione.voting.domain.service;
 
 import com.ubione.voting.domain.entity.Vote;
 import com.ubione.voting.domain.entity.VoteChoice;
-import com.ubione.voting.domain.entity.VotingSession;
 import com.ubione.voting.domain.exception.SessionClosedException;
 import com.ubione.voting.domain.exception.VoteAlreadyCastException;
 import com.ubione.voting.infra.http.CpfValidationClient;
 import com.ubione.voting.infra.messaging.VotingEventPublisher;
 import com.ubione.voting.infra.repository.VoteRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,8 @@ import java.util.Map;
 
 @Service
 public class VoteService {
+
+    private static final Logger log = LoggerFactory.getLogger(VoteService.class);
 
     private final VoteRepository voteRepository;
     private final AgendaService agendaService;
@@ -41,38 +44,32 @@ public class VoteService {
     }
 
     @Transactional
-    public Vote castVote(Long agendaId, String cpf, String choiceRaw) {
+    public Vote castVote(Long agendaId, String cpf, VoteChoice choice) {
         var agenda = agendaService.getOrThrow(agendaId);
 
-        VotingSession session = sessionService.getCurrentOpenSession(agendaId)
+        var session = sessionService.getCurrentOpenSession(agendaId)
                 .orElseThrow(() -> new SessionClosedException(agendaId));
 
-        OffsetDateTime now = OffsetDateTime.now(clock);
-        if (session.getClosesAt().isBefore(now) || session.getStatus() != com.ubione.voting.domain.entity.SessionStatus.OPEN) {
+        var now = OffsetDateTime.now(clock);
+        if (!session.isOpenAt(now)) {
             throw new SessionClosedException(agendaId);
         }
 
         cpfValidationClient.validateCpfOrThrow(cpf);
 
-        VoteChoice choice;
-        try {
-            choice = VoteChoice.valueOf(choiceRaw.toUpperCase());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("choice must be YES or NO");
-        }
-
-        Vote v = new Vote();
+        var v = new Vote();
         v.setAgenda(agenda);
         v.setCpf(cpf);
         v.setChoice(choice);
 
         try {
-            Vote saved = voteRepository.save(v);
+            var saved = voteRepository.save(v);
             publisher.publish("vote.cast", Map.of(
                     "agendaId", agendaId,
                     "cpf", cpf,
                     "choice", choice.name()
             ));
+            log.debug("vote.persisted agendaId={} cpf={} voteId={}", agendaId, cpf, saved.getId());
             return saved;
         } catch (DataIntegrityViolationException ex) {
             throw new VoteAlreadyCastException(agendaId, cpf);

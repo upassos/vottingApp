@@ -61,3 +61,41 @@ Publishes events to exchange `voting.events`:
 - `session.opened`
 - `session.closed`
 - `vote.cast`
+
+
+---
+
+## Interview-ready notes (architecture & trade-offs)
+
+### Architecture
+- **Layers**: `api` (controllers/DTOs) → `domain` (services/entities/exceptions) → `infra` (repositories/http/messaging).
+- **Database**: Oracle via Spring Data JPA + Flyway migrations.
+- **Messaging**: RabbitMQ publisher is optional (`VOTING_MESSAGING_ENABLED=true|false`) to keep the core domain independent.
+
+### SOLID / SRP
+To improve maintainability, controllers were split by responsibility:
+- `AgendaCommandController`: write operations (create agenda, open session, cast vote)
+- `AgendaQueryController`: read operations (get agenda, list, current session, result)
+
+This keeps each controller focused and makes it easier to evolve endpoints independently.
+
+### Modern Java
+DTOs were migrated to **Java records**:
+- less boilerplate
+- immutable request/response contracts
+- better signal of intent (data carriers)
+
+### Reduced conditionals
+Some domain rules were encapsulated in entities to avoid scattered `if/else`.
+Example: `VotingSession#isOpenAt(now)` centralizes session-open logic.
+
+### Observability
+The app exposes endpoints via Spring Boot Actuator:
+- `/actuator/health`
+- `/actuator/metrics`
+- `/actuator/prometheus` (Prometheus scraping)
+
+### Testing strategy
+- Unit tests for domain services (business rules)
+- Web layer tests using `@WebMvcTest` for controllers
+- E2E integration test using Testcontainers (Oracle) + WireMock (CPF validation)

@@ -5,6 +5,8 @@ import com.ubione.voting.domain.entity.VotingSession;
 import com.ubione.voting.domain.exception.SessionAlreadyOpenException;
 import com.ubione.voting.infra.messaging.VotingEventPublisher;
 import com.ubione.voting.infra.repository.VotingSessionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,8 @@ import java.util.Optional;
 
 @Service
 public class SessionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SessionService.class);
 
     private final VotingSessionRepository sessionRepository;
     private final AgendaService agendaService;
@@ -40,7 +44,7 @@ public class SessionService {
 
     @Transactional
     public VotingSession openSession(Long agendaId, Integer durationSeconds) {
-        agendaService.getOrThrow(agendaId);
+        var agenda = agendaService.getOrThrow(agendaId);
 
         Optional<VotingSession> existing =
                 sessionRepository.findFirstByAgendaIdAndStatusOrderByOpenedAtDesc(agendaId, SessionStatus.OPEN);
@@ -52,7 +56,7 @@ public class SessionService {
         OffsetDateTime now = OffsetDateTime.now(clock).withOffsetSameInstant(ZoneOffset.UTC);
 
         VotingSession session = new VotingSession();
-        session.setAgenda(agendaService.getOrThrow(agendaId));
+        session.setAgenda(agenda);
         session.setOpenedAt(now);
         session.setClosesAt(now.plusSeconds(seconds));
         session.setStatus(SessionStatus.OPEN);
@@ -63,6 +67,7 @@ public class SessionService {
                 "agendaId", agendaId,
                 "closesAt", saved.getClosesAt().toString()
         ));
+        log.debug("session.saved agendaId={} sessionId={} closesAt={}", agendaId, saved.getId(), saved.getClosesAt());
         return saved;
     }
 
@@ -75,6 +80,7 @@ public class SessionService {
     public void closeExpiredSessions() {
         OffsetDateTime now = OffsetDateTime.now(clock).withOffsetSameInstant(ZoneOffset.UTC);
         List<VotingSession> expired = sessionRepository.findExpiredOpenSessions(now);
+
         for (VotingSession s : expired) {
             s.setStatus(SessionStatus.CLOSED);
             sessionRepository.save(s);
@@ -82,6 +88,7 @@ public class SessionService {
                     "sessionId", s.getId(),
                     "agendaId", s.getAgenda().getId()
             ));
+            log.info("session.closed sessionId={} agendaId={}", s.getId(), s.getAgenda().getId());
         }
     }
 }

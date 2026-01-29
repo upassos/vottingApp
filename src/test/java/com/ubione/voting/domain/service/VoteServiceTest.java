@@ -1,6 +1,7 @@
 package com.ubione.voting.domain.service;
 
 import com.ubione.voting.domain.entity.Agenda;
+import com.ubione.voting.domain.entity.VoteChoice;
 import com.ubione.voting.domain.entity.SessionStatus;
 import com.ubione.voting.domain.entity.VotingSession;
 import com.ubione.voting.domain.exception.SessionClosedException;
@@ -35,7 +36,7 @@ class VoteServiceTest {
 
         VoteService service = new VoteService(voteRepo, agendaService, sessionService, cpfClient, publisher, Clock.systemUTC());
 
-        assertThrows(SessionClosedException.class, () -> service.castVote(1L, "12345678909", "YES"));
+        assertThrows(SessionClosedException.class, () -> service.castVote(1L, "12345678909", VoteChoice.YES));
     }
 
     @Test
@@ -59,7 +60,7 @@ class VoteServiceTest {
 
         VoteService service = new VoteService(voteRepo, agendaService, sessionService, cpfClient, publisher, Clock.systemUTC());
 
-        assertThrows(VoteAlreadyCastException.class, () -> service.castVote(1L, "12345678909", "YES"));
+        assertThrows(VoteAlreadyCastException.class, () -> service.castVote(1L, "12345678909", VoteChoice.YES));
     }
 
     @Test
@@ -82,6 +83,6 @@ class VoteServiceTest {
         Clock clock = Clock.fixed(Instant.parse("2024-01-02T00:00:00Z"), ZoneOffset.UTC);
         VoteService service = new VoteService(voteRepo, agendaService, sessionService, cpfClient, publisher, clock);
 
-        assertThrows(SessionClosedException.class, () -> service.castVote(1L, "12345678909", "YES"));
+        assertThrows(SessionClosedException.class, () -> service.castVote(1L, "12345678909", VoteChoice.YES));
     }
 }

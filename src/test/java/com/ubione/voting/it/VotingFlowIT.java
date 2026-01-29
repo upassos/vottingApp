@@ -62,23 +62,18 @@ class VotingFlowIT {
         wireMock.stubFor(get(urlPathMatching("/users/\d{11}"))
                 .willReturn(okJson("{\"status\":\"ABLE_TO_VOTE\"}")));
 
-        CreateAgendaRequest create = new CreateAgendaRequest();
-        create.setTitle("Test Agenda");
-        create.setDescription("Integration test");
+        CreateAgendaRequest create = new CreateAgendaRequest("Test Agenda", "Integration test");
 
         ResponseEntity<String> created = rest.postForEntity(url("/api/v1/agendas"), create, String.class);
         Assertions.assertEquals(201, created.getStatusCode().value());
         String location = created.getHeaders().getLocation().toString();
         Long agendaId = Long.valueOf(location.substring(location.lastIndexOf('/') + 1));
 
-        OpenSessionRequest open = new OpenSessionRequest();
-        open.setDurationSeconds(60);
+        OpenSessionRequest open = new OpenSessionRequest(60);
         ResponseEntity<String> opened = rest.postForEntity(url("/api/v1/agendas/" + agendaId + "/sessions"), open, String.class);
         Assertions.assertEquals(201, opened.getStatusCode().value());
 
-        CastVoteRequest vote = new CastVoteRequest();
-        vote.setCpf("12345678909");
-        vote.setChoice("YES");
+        CastVoteRequest vote = new CastVoteRequest("12345678909", VoteChoice.YES);
 
         ResponseEntity<String> voted = rest.postForEntity(url("/api/v1/agendas/" + agendaId + "/votes"), vote, String.class);
         Assertions.assertEquals(201, voted.getStatusCode().value());

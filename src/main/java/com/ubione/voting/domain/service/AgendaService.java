@@ -3,12 +3,16 @@ package com.ubione.voting.domain.service;
 import com.ubione.voting.domain.entity.Agenda;
 import com.ubione.voting.domain.exception.NotFoundException;
 import com.ubione.voting.infra.repository.AgendaRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AgendaService {
+
+    private static final Logger log = LoggerFactory.getLogger(AgendaService.class);
 
     private final AgendaRepository agendaRepository;
 
@@ -20,7 +24,10 @@ public class AgendaService {
         Agenda a = new Agenda();
         a.setTitle(title);
         a.setDescription(description);
-        return agendaRepository.save(a);
+
+        Agenda saved = agendaRepository.save(a);
+        log.debug("agenda.saved id={}", saved.getId());
+        return saved;
     }
 
     public Agenda getOrThrow(Long id) {

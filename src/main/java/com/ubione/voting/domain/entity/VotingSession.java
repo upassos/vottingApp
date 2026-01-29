@@ -35,4 +35,9 @@ public class VotingSession {
     public void setOpenedAt(OffsetDateTime openedAt) { this.openedAt = openedAt; }
     public void setClosesAt(OffsetDateTime closesAt) { this.closesAt = closesAt; }
     public void setStatus(SessionStatus status) { this.status = status; }
+
+    public boolean isOpenAt(OffsetDateTime now) {
+        return this.status == SessionStatus.OPEN && this.closesAt != null && this.closesAt.isAfter(now);
+    }
 }
+
