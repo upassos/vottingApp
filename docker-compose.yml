@@ -1,0 +1,20 @@
+services:
+  oracle:
+    image: gvenzl/oracle-free:23.3-slim
+    environment:
+      ORACLE_PASSWORD: "oracle"
+      APP_USER: "voting"
+      APP_USER_PASSWORD: "voting"
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"

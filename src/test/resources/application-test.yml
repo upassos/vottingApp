@@ -1,0 +1,8 @@
+cpf:
+  validation:
+    base-url: http://localhost:8089
+    timeout-ms: 5000
+
+voting:
+  messaging:
+    enabled: false
